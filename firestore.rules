@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read access to exam_scans collection for all users
+    match /exam_scans/{document} {
+      allow read: if true;
+      
+      // Allow write access to exam_scans
+      // In a production app, you would want to add authentication here
+      allow write: if true;
+      
+      // Example with authentication (uncomment and modify for production):
+      // allow read, write: if request.auth != null;
+    }
+    
+    // Example of more restrictive rules for other collections:
+    // match /users/{userId} {
+    //   allow read, write: if request.auth != null && request.auth.uid == userId;
+    // }
+  }
+}

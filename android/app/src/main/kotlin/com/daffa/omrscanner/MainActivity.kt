@@ -1,4 +1,4 @@
-package com.example.demo
+package com.daffa.omrscanner
 
 import io.flutter.embedding.android.FlutterActivity
 

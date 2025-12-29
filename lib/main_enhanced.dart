@@ -11,9 +11,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'firebase_options.dart';
-import 'features/analytics/analytics_dashboard.dart';
-import 'models/exam_submission.dart';
-import 'repositories/exam_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,9 +91,6 @@ class OMRHomePage extends StatefulWidget {
 }
 
 class _OMRHomePageState extends State<OMRHomePage> {
-  int _currentIndex = 0;
-  final PageController _pageController = PageController();
-
   // Image handling variables
   File? _imageFile;
   Uint8List? _webImage;
@@ -333,56 +327,7 @@ class _OMRHomePageState extends State<OMRHomePage> {
   }
 
   @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _onPageChanged(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-  }
-
-  void _onTabTapped(int index) {
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        children: [_buildScannerPage(), const AnalyticsDashboard()],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.scanner),
-            activeIcon: Icon(Icons.scanner),
-            label: 'Scanner',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            activeIcon: Icon(Icons.analytics),
-            label: 'Analytics',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScannerPage() {
     return Scaffold(
       appBar: AppBar(
         title: const Text('OMR Scanner Pro'),
