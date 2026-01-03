@@ -95,7 +95,7 @@ class AnalyticsService {
 
     // Count submissions per day
     for (final submission in submissions) {
-      final timestamp = (submission.timestamp as Timestamp?)?.toDate();
+      final timestamp = submission.timestamp;
       if (timestamp != null) {
         final dateKey = DateFormat('yyyy-MM-dd').format(timestamp);
         dailyCounts[dateKey] = (dailyCounts[dateKey] ?? 0) + 1;

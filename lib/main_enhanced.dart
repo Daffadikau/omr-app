@@ -431,7 +431,7 @@ class _OMRHomePageState extends State<OMRHomePage> {
                           gradient: LinearGradient(
                             colors: [
                               Theme.of(context).colorScheme.surface,
-                              Theme.of(context).colorScheme.surfaceVariant,
+                              Theme.of(context).colorScheme.surfaceContainerHighest,
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -550,7 +550,7 @@ class _OMRHomePageState extends State<OMRHomePage> {
                         value: _uploadProgress,
                         backgroundColor: Theme.of(
                           context,
-                        ).colorScheme.surfaceVariant,
+                        ).colorScheme.surfaceContainerHighest,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           Theme.of(context).colorScheme.primary,
                         ),
@@ -683,7 +683,7 @@ class _OMRHomePageState extends State<OMRHomePage> {
                           height: 50,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(25),
-                            color: Theme.of(context).colorScheme.surfaceVariant,
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(25),
@@ -693,7 +693,7 @@ class _OMRHomePageState extends State<OMRHomePage> {
                               placeholder: (context, url) => Container(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.surfaceVariant,
+                                ).colorScheme.surfaceContainerHighest,
                                 child: const Center(
                                   child: CircularProgressIndicator(),
                                 ),

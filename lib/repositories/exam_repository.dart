@@ -316,8 +316,8 @@ class ExamRepository {
 
     // Track upload progress
     uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-      if (onProgress != null && snapshot.totalBytes != null) {
-        double progress = snapshot.bytesTransferred / snapshot.totalBytes!;
+      if (onProgress != null) {
+        double progress = snapshot.bytesTransferred / snapshot.totalBytes;
         onProgress(progress);
       }
     });

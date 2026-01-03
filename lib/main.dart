@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'firebase_options.dart';
+import 'widgets/web_camera_capture.dart' if (dart.library.io) 'widgets/web_camera_capture_stub.dart';
 import 'features/analytics/analytics_dashboard.dart';
 import 'models/exam_submission.dart';
 import 'repositories/exam_repository.dart';
@@ -148,6 +149,25 @@ class _OMRHomePageState extends State<OMRHomePage> {
           ),
         );
       }
+    }
+  }
+
+  // Web Camera Capture
+  Future<void> _openWebCamera() async {
+    if (!kIsWeb) return;
+    
+    final result = await WebCameraCapture.captureImage(context);
+    
+    if (result != null) {
+      setState(() {
+        _pickedFile = result;
+      });
+      
+      var imageBytes = await result.readAsBytes();
+      var optimizedImage = await _optimizeImage(imageBytes);
+      setState(() {
+        _webImage = optimizedImage;
+      });
     }
   }
 
@@ -486,7 +506,9 @@ class _OMRHomePageState extends State<OMRHomePage> {
                           gradient: LinearGradient(
                             colors: [
                               Theme.of(context).colorScheme.surface,
-                              Theme.of(context).colorScheme.surfaceVariant,
+                              Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -570,7 +592,7 @@ class _OMRHomePageState extends State<OMRHomePage> {
                       children: [
                         Expanded(
                           child: ElevatedButton.icon(
-                            onPressed: () => _pickImage(ImageSource.camera),
+                            onPressed: () => kIsWeb ? _openWebCamera() : _pickImage(ImageSource.camera),
                             icon: const Icon(Icons.camera),
                             label: const Text('Camera'),
                             style: ElevatedButton.styleFrom(
@@ -605,7 +627,7 @@ class _OMRHomePageState extends State<OMRHomePage> {
                         value: _uploadProgress,
                         backgroundColor: Theme.of(
                           context,
-                        ).colorScheme.surfaceVariant,
+                        ).colorScheme.surfaceContainerHighest,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           Theme.of(context).colorScheme.primary,
                         ),
@@ -738,7 +760,9 @@ class _OMRHomePageState extends State<OMRHomePage> {
                           height: 50,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(25),
-                            color: Theme.of(context).colorScheme.surfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(25),
@@ -748,7 +772,7 @@ class _OMRHomePageState extends State<OMRHomePage> {
                               placeholder: (context, url) => Container(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.surfaceVariant,
+                                ).colorScheme.surfaceContainerHighest,
                                 child: const Center(
                                   child: CircularProgressIndicator(),
                                 ),

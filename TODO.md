@@ -1,30 +1,35 @@
-# OMR Scanner App - Implementation Progress
+# TODO: Fix ExamSubmission fromMap() Method
 
-## Phase 1: Critical Issues (Completed ✅)
-- [x] 1.1 Fix Package Name Consistency
-  - [x] Update Android package name to `com.daffa.omrscanner`
-  - [x] Regenerate google-services.json
-  - [x] Update firebase.json configuration
-- [x] 1.2 Clean Up Code Duplication  
-  - [x] Remove duplicate StreamBuilder in main.dart
-  - [x] Consolidate to repository pattern
-- [x] 1.3 Implement Basic Security Rules
-  - [x] Create firestore.rules
-  - [x] Create storage.rules
-  - [ ] Deploy security rules (manual step required)
+## Goal
+Add a `fromMap()` factory method to the ExamSubmission model and update the offline queue service to use it.
 
-## Phase 2: Performance Optimizations (Pending)
-- [ ] 2.1 Image Optimization
-- [ ] 2.2 Add Caching
-- [ ] 2.3 Implement Pagination
+## Information Gathered
+- ExamSubmission model currently has `toMap()` method but no `fromMap()` factory method
+- Offline queue service manually constructs ExamSubmission objects from map data in `_processUploadExam()` and `_processUpdateExam()` methods
+- QueueItem already has a proper `fromMap()` factory method that works correctly
 
-## Phase 3: Enhanced Architecture (Pending)
-- [ ] 3.1 State Management
-- [ ] 3.2 Repository Enhancement
+## Plan
+1. Add `fromMap()` factory method to ExamSubmission model
+   - Mirror the existing `toMap()` method structure
+   - Handle timestamp conversion properly (Map contains Timestamp objects)
+   - Include all fields that are in the model
 
-## Phase 4: Security & Monitoring (Pending)
-- [ ] 4.1 Security Enhancements
-- [ ] 4.2 Monitoring & Analytics
+2. Update offline queue service to use `ExamSubmission.fromMap()`
+   - Replace manual construction in `_processUploadExam()`
+   - Replace manual construction in `_processUpdateExam()`
+   - Ensure data format matches what `toMap()` produces
 
----
-**Current Status**: Phase 1 completed! Firebase connection is now fixed.
+## Dependent Files to be edited
+- `lib/models/exam_submission.dart` - Add fromMap() factory method
+- `lib/services/offline_queue_service.dart` - Update to use fromMap() method
+
+## Followup steps
+- Test the changes by running the app
+- Verify offline queue service works correctly with the new fromMap() method
+- Ensure data consistency between toMap() and fromMap()
+
+## Status
+- [x] Add fromMap() factory method to ExamSubmission model
+- [x] Update offline queue service _processUploadExam() method
+- [x] Update offline queue service _processUpdateExam() method
+- [ ] Test the changes

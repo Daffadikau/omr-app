@@ -1,10 +1,8 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 import '../core/constants/app_constants.dart';
-import '../models/exam_submission.dart';
 
 class ImageOptimizationService {
   static Future<File> optimizeImageFile(File imageFile) async {

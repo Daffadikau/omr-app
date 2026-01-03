@@ -64,6 +64,32 @@ class ExamSubmission {
     };
   }
 
+  factory ExamSubmission.fromMap(Map<String, dynamic> map) {
+    return ExamSubmission(
+      id: '', // ID should be set separately when creating from database
+      studentName: map['student_name'] ?? 'Unknown',
+      imageUrl: map['image_url'] ?? '',
+      status: map['status'] ?? 'pending',
+      resultScore: map['result_score'],
+      timestamp: map['timestamp'] != null
+          ? (map['timestamp'] is Timestamp
+                ? (map['timestamp'] as Timestamp).toDate()
+                : (map['timestamp'] is String
+                      ? DateTime.parse(map['timestamp'])
+                      : null))
+          : null,
+      fileName: map['file_name'],
+      fileSize: map['file_size'] != null
+          ? (map['file_size'] is int
+                ? map['file_size']
+                : int.tryParse(map['file_size'].toString()))
+          : null,
+      errorMessage: map['error_message'],
+      metadata: map['metadata'],
+      subject: map['subject'],
+    );
+  }
+
   ExamSubmission copyWith({
     String? id,
     String? studentName,

@@ -507,7 +507,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard>
                         value: percentage / 100,
                         backgroundColor: Theme.of(
                           context,
-                        ).colorScheme.surfaceVariant,
+                        ).colorScheme.surfaceContainerHighest,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           Theme.of(context).colorScheme.primary,
                         ),
