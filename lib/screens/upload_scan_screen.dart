@@ -1,8 +1,12 @@
-import 'dart:io';
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../services/scan_service.dart';
 import 'answer_key_list_screen.dart';
 import 'scan_result_screen.dart';
@@ -20,7 +24,9 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
   final ImagePicker _picker = ImagePicker();
   static const Duration _uploadTimeout = Duration(seconds: 60);
 
-  File? _selectedImage;
+  File? _selectedImageFile;
+  Uint8List? _selectedImageBytes;
+  String? _selectedFileName;
   String? _selectedAnswerKeyId;
   String? _selectedAnswerKeyName;
   bool _isUploading = false;
@@ -29,7 +35,9 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
 
   void _clearImage() {
     setState(() {
-      _selectedImage = null;
+      _selectedImageFile = null;
+      _selectedImageBytes = null;
+      _selectedFileName = null;
       _uploadError = null;
       _hasTimeout = false;
     });
@@ -51,9 +59,20 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
       );
 
       if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
+        if (kIsWeb) {
+          final bytes = await image.readAsBytes();
+          setState(() {
+            _selectedImageBytes = bytes;
+            _selectedImageFile = null;
+            _selectedFileName = image.name;
+          });
+        } else {
+          setState(() {
+            _selectedImageFile = File(image.path);
+            _selectedImageBytes = null;
+            _selectedFileName = image.name;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -87,7 +106,7 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
   }
 
   Future<void> _uploadScan() async {
-    if (_selectedImage == null) {
+    if (_selectedImageFile == null && _selectedImageBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pilih gambar LJK terlebih dahulu')),
       );
@@ -116,7 +135,9 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
 
     try {
       final scanId = await _scanService.uploadScan(
-        imageFile: _selectedImage!,
+        imageFile: _selectedImageFile,
+        imageBytes: _selectedImageBytes,
+        fileName: _selectedFileName ?? 'scan.jpg',
         studentName: _nameController.text.trim(),
         answerKeyId: _selectedAnswerKeyId!,
       ).timeout(
@@ -296,7 +317,7 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
             ],
 
             // Preview gambar
-            if (_selectedImage != null) ...[
+            if (_selectedImageFile != null || _selectedImageBytes != null) ...[
               Stack(
                 children: [
                   Container(
@@ -307,10 +328,15 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        _selectedImage!,
-                        fit: BoxFit.contain,
-                      ),
+                      child: _selectedImageBytes != null
+                          ? Image.memory(
+                              _selectedImageBytes!,
+                              fit: BoxFit.contain,
+                            )
+                          : Image.file(
+                              _selectedImageFile!,
+                              fit: BoxFit.contain,
+                            ),
                     ),
                   ),
                   // Delete button
@@ -324,6 +350,30 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
                       child: const Icon(Icons.delete, color: Colors.white),
                     ),
                   ),
+                  if (_selectedFileName != null)
+                    Positioned(
+                      left: 12,
+                      bottom: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          _selectedFileName!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 16),

@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -9,18 +11,37 @@ class ScanService {
   /// Upload LJK scan ke Firebase
   /// Returns scanId untuk tracking status
   Future<String> uploadScan({
-    required File imageFile,
+    File? imageFile,
+    Uint8List? imageBytes,
+    required String fileName,
     required String studentName,
     required String answerKeyId,
   }) async {
     try {
+      if (imageFile == null && imageBytes == null) {
+        throw Exception('Tidak ada file gambar untuk diupload');
+      }
+
       // 1. Generate scan ID
       final scanDoc = _firestore.collection('exam_scans').doc();
       final scanId = scanDoc.id;
 
       // 2. Upload image ke Storage
       final ref = _storage.ref('scans/$scanId/original.jpg');
-      final uploadTask = ref.putFile(imageFile);
+      UploadTask uploadTask;
+      if (imageFile != null) {
+        uploadTask = ref.putFile(imageFile);
+      } else {
+        uploadTask = ref.putData(
+          imageBytes!,
+          SettableMetadata(
+            contentType: 'image/jpeg',
+            customMetadata: {
+              'file_name': fileName,
+            },
+          ),
+        );
+      }
       
       // Track progress (optional)
       uploadTask.snapshotEvents.listen((snapshot) {
