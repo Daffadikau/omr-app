@@ -1,12 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:intl/intl.dart';
 import 'upload_scan_screen.dart';
 import 'scan_result_screen.dart';
 import 'answer_key_list_screen.dart';
 
-class ScanHistoryScreen extends StatelessWidget {
+class ScanHistoryScreen extends StatefulWidget {
   const ScanHistoryScreen({super.key});
+
+  @override
+  State<ScanHistoryScreen> createState() => _ScanHistoryScreenState();
+}
+
+class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
+  Future<void> _deleteScan(String scanId) async {
+    try {
+      // Delete image from Storage
+      try {
+        await FirebaseStorage.instance.ref('scans/$scanId/original.jpg').delete();
+      } catch (e) {
+        print('Error deleting image: $e');
+      }
+
+      // Delete document from Firestore
+      await FirebaseFirestore.instance
+          .collection('exam_scans')
+          .doc(scanId)
+          .delete();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Scan dihapus successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error menghapus scan: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showDeleteConfirmation(String scanId, String studentName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Scan'),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus scan $studentName?\nFoto dan data akan dihapus dari Firebase.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteScan(scanId);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +269,26 @@ class ScanHistoryScreen extends StatelessWidget {
                         ),
                     ],
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _showDeleteConfirmation(doc.id, studentName);
+                      }
+                    },
+                    itemBuilder: (BuildContext context) => [
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red, size: 20),
+                            SizedBox(width: 8),
+                            Text('Hapus', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: const Icon(Icons.more_vert),
+                  ),
                   onTap: () {
                     Navigator.push(
                       context,

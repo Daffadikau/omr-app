@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -17,11 +18,22 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
   final TextEditingController _nameController = TextEditingController();
   final ScanService _scanService = ScanService();
   final ImagePicker _picker = ImagePicker();
+  static const Duration _uploadTimeout = Duration(seconds: 60);
 
   File? _selectedImage;
   String? _selectedAnswerKeyId;
   String? _selectedAnswerKeyName;
   bool _isUploading = false;
+  String? _uploadError;
+  bool _hasTimeout = false;
+
+  void _clearImage() {
+    setState(() {
+      _selectedImage = null;
+      _uploadError = null;
+      _hasTimeout = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -96,13 +108,23 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
       return;
     }
 
-    setState(() => _isUploading = true);
+    setState(() {
+      _isUploading = true;
+      _uploadError = null;
+      _hasTimeout = false;
+    });
 
     try {
       final scanId = await _scanService.uploadScan(
         imageFile: _selectedImage!,
         studentName: _nameController.text.trim(),
         answerKeyId: _selectedAnswerKeyId!,
+      ).timeout(
+        _uploadTimeout,
+        onTimeout: () {
+          setState(() => _hasTimeout = true);
+          throw TimeoutException('Upload timeout setelah ${_uploadTimeout.inSeconds} detik');
+        },
       );
 
       if (mounted) {
@@ -121,11 +143,18 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
           ),
         );
       }
+    } on TimeoutException catch (e) {
+      if (mounted) {
+        setState(() {
+          _uploadError = 'Timeout: ${e.message}';
+          _hasTimeout = true;
+        });
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        setState(() {
+          _uploadError = 'Error: $e';
+        });
       }
     } finally {
       if (mounted) {
@@ -200,21 +229,102 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
             ),
             const SizedBox(height: 24),
 
+            // Error message display
+            if (_uploadError != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  border: Border.all(color: Colors.red, width: 1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.error, color: Colors.red, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _uploadError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _uploadError = null;
+                                _hasTimeout = false;
+                              });
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Coba Lagi'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _clearImage,
+                            icon: const Icon(Icons.delete),
+                            label: const Text('Hapus Foto'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Preview gambar
             if (_selectedImage != null) ...[
-              Container(
-                height: 300,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    _selectedImage!,
-                    fit: BoxFit.contain,
+              Stack(
+                children: [
+                  Container(
+                    height: 300,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        _selectedImage!,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
-                ),
+                  // Delete button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: FloatingActionButton.small(
+                      onPressed: _clearImage,
+                      backgroundColor: Colors.red,
+                      heroTag: 'delete_photo_btn',
+                      child: const Icon(Icons.delete, color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
             ],
