@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 import 'screens/upload_scan_screen.dart';
+import 'screens/analytics_screen.dart';
 import 'screens/scan_history_screen.dart';
 import 'screens/answer_key_list_screen.dart';
 
@@ -86,11 +87,13 @@ class _HomePageState extends State<_HomePage> {
         },
         children: const [
           UploadScanScreen(),
+          AnalyticsScreen(),
           ScanHistoryScreen(),
           AnswerKeyListScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
         onTap: (index) {
           _pageController.animateToPage(
@@ -101,6 +104,7 @@ class _HomePageState extends State<_HomePage> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.upload), label: 'Upload'),
+          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'Analytics'),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Riwayat'),
           BottomNavigationBarItem(icon: Icon(Icons.quiz), label: 'Kunci'),
         ],
