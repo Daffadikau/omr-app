@@ -3,18 +3,20 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'backend_service.dart';
 
 class ScanService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  /// Upload LJK scan ke Firebase
-  /// Returns scanId untuk tracking status
-  Future<String> uploadScan({
+  /// Upload LJK dan proses langsung dengan backend (ngrok)
+  /// Compatible dengan aplikasi tester teman
+  Future<String> uploadAndProcessWithBackend({
     File? imageFile,
     Uint8List? imageBytes,
     required String fileName,
     required String studentName,
+    required String nim,
     required String answerKeyId,
   }) async {
     try {
@@ -36,13 +38,92 @@ class ScanService {
           imageBytes!,
           SettableMetadata(
             contentType: 'image/jpeg',
-            customMetadata: {
-              'file_name': fileName,
-            },
+            customMetadata: {'file_name': fileName},
           ),
         );
       }
-      
+
+      await uploadTask;
+      final imageUrl = await ref.getDownloadURL();
+
+      // 3. Get answer key untuk kode soal
+      final keyDoc = await _firestore
+          .collection('answer_keys')
+          .doc(answerKeyId)
+          .get();
+
+      if (!keyDoc.exists) {
+        throw Exception('Kunci jawaban tidak ditemukan');
+      }
+
+      final kodeSoal = keyDoc.data()?['name'] ?? 'UJIAN-01';
+
+      // 4. Kirim ke backend untuk scan (langsung pakai imageFile/bytes)
+      final scanResult = await BackendService.scanLJK(
+        kodeSoal: kodeSoal,
+        imageFile: imageFile ?? imageBytes,
+        fileName: fileName,
+      );
+
+      // 5. Simpan hasil ke Firestore
+      await scanDoc.set({
+        'student_name': studentName,
+        'nim': nim,
+        'image_url': imageUrl,
+        'answer_key_id': answerKeyId,
+        'kode_soal': kodeSoal,
+        'status': 'completed',
+        'submitted_at': FieldValue.serverTimestamp(),
+        'processed_at': FieldValue.serverTimestamp(),
+        'results': scanResult['jawaban'],
+        'score': {
+          'correct': scanResult['benar'],
+          'wrong': scanResult['salah'],
+          'total_score': scanResult['skor'],
+        },
+        'ai_confidence': scanResult['confidence'],
+      });
+
+      return scanId;
+    } catch (e) {
+      throw Exception('Failed to upload and process: $e');
+    }
+  }
+
+  /// Upload LJK scan ke Firebase (original method)
+  /// Returns scanId untuk tracking status
+  Future<String> uploadScan({
+    File? imageFile,
+    Uint8List? imageBytes,
+    required String fileName,
+    required String studentName,
+    required String nim,
+    required String answerKeyId,
+  }) async {
+    try {
+      if (imageFile == null && imageBytes == null) {
+        throw Exception('Tidak ada file gambar untuk diupload');
+      }
+
+      // 1. Generate scan ID
+      final scanDoc = _firestore.collection('exam_scans').doc();
+      final scanId = scanDoc.id;
+
+      // 2. Upload image ke Storage
+      final ref = _storage.ref('scans/$scanId/original.jpg');
+      UploadTask uploadTask;
+      if (imageFile != null) {
+        uploadTask = ref.putFile(imageFile);
+      } else {
+        uploadTask = ref.putData(
+          imageBytes!,
+          SettableMetadata(
+            contentType: 'image/jpeg',
+            customMetadata: {'file_name': fileName},
+          ),
+        );
+      }
+
       // Track progress (optional)
       uploadTask.snapshotEvents.listen((snapshot) {
         final progress = snapshot.bytesTransferred / snapshot.totalBytes;
@@ -55,6 +136,7 @@ class ScanService {
       // 3. Buat dokumen Firestore dengan status "processing"
       await scanDoc.set({
         'student_name': studentName,
+        'nim': nim,
         'image_url': imageUrl,
         'answer_key_id': answerKeyId,
         'status': 'processing',
@@ -103,8 +185,14 @@ class ScanService {
   /// Calculate score by comparing results with answer key
   Future<int> calculateScore(String scanId, String answerKeyId) async {
     try {
-      final scanDoc = await _firestore.collection('exam_scans').doc(scanId).get();
-      final keyDoc = await _firestore.collection('answer_keys').doc(answerKeyId).get();
+      final scanDoc = await _firestore
+          .collection('exam_scans')
+          .doc(scanId)
+          .get();
+      final keyDoc = await _firestore
+          .collection('answer_keys')
+          .doc(answerKeyId)
+          .get();
 
       if (!scanDoc.exists || !keyDoc.exists) {
         throw Exception('Scan or answer key not found');

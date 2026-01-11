@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/scan_service.dart';
 
 class ScanResultScreen extends StatelessWidget {
@@ -14,6 +16,10 @@ class ScanResultScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hasil Scan'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: scanService.getScanStream(scanId),
@@ -69,6 +75,22 @@ class ScanResultScreen extends StatelessWidget {
                     'Nama: $studentName',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Pemrosesan tetap berjalan di latar belakang',
+                          ),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Kembali'),
+                  ),
                 ],
               ),
             );
@@ -76,7 +98,8 @@ class ScanResultScreen extends StatelessWidget {
 
           // Failed state
           if (status == 'failed') {
-            final errorMessage = data['error_message'] as String? ?? 'Unknown error';
+            final errorMessage =
+                data['error_message'] as String? ?? 'Unknown error';
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -110,6 +133,9 @@ class ScanResultScreen extends StatelessWidget {
           if (status == 'completed') {
             final answerKeyId = data['answer_key_id'] as String?;
             final results = data['results'] as Map<String, dynamic>?;
+            final originalUrl = data['image_url'] as String?;
+            final annotatedUrl = data['annotated_url'] as String?;
+            final annotatedPath = data['annotated_path'] as String?;
 
             if (answerKeyId == null || results == null) {
               return const Center(child: Text('Data hasil tidak lengkap'));
@@ -125,12 +151,16 @@ class ScanResultScreen extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final keyData = keySnapshot.data!.data() as Map<String, dynamic>?;
+                final keyData =
+                    keySnapshot.data!.data() as Map<String, dynamic>?;
                 if (keyData == null) {
-                  return const Center(child: Text('Kunci jawaban tidak ditemukan'));
+                  return const Center(
+                    child: Text('Kunci jawaban tidak ditemukan'),
+                  );
                 }
 
-                final correctAnswers = keyData['answers'] as Map<String, dynamic>;
+                final correctAnswers =
+                    keyData['answers'] as Map<String, dynamic>;
                 final keyName = keyData['name'] as String? ?? 'Tanpa Nama';
 
                 // Calculate score
@@ -142,7 +172,15 @@ class ScanResultScreen extends StatelessWidget {
                   final userAnswer = results[i.toString()];
                   final correctAnswer = correctAnswers[i.toString()];
 
-                  if (userAnswer == null || userAnswer == '' || userAnswer == '-') {
+                  // Check if empty/unanswered
+                  final isEmpty =
+                      userAnswer == null ||
+                      userAnswer.toString().trim().isEmpty ||
+                      userAnswer == '-' ||
+                      userAnswer == '' ||
+                      userAnswer.toString().toUpperCase() == 'KOSONG';
+
+                  if (isEmpty) {
                     unanswered++;
                   } else if (userAnswer == correctAnswer) {
                     correct++;
@@ -156,6 +194,73 @@ class ScanResultScreen extends StatelessWidget {
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    // Image preview - disabled karena CORS issue
+                    if (false &&
+                        originalUrl != null &&
+                        originalUrl.isNotEmpty) ...[
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Container(
+                              color: Colors.grey[200],
+                              padding: const EdgeInsets.all(12),
+                              child: const Text(
+                                'Gambar LJK',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            SizedBox(
+                              height: 280,
+                              child: Image.network(
+                                originalUrl,
+                                fit: BoxFit.contain,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return const Center(
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    },
+                                errorBuilder: (context, error, stackTrace) {
+                                  print('Error loading image: $error');
+                                  print('Image URL: $originalUrl');
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.broken_image,
+                                            size: 64,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text('Gagal memuat gambar'),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            error.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
                     // Summary Card
                     Card(
                       color: Colors.blue[50],
@@ -247,10 +352,14 @@ class ScanResultScreen extends StatelessWidget {
                     ...List.generate(100, (index) {
                       final num = index + 1;
                       final userAnswer = results[num.toString()] ?? '-';
-                      final correctAnswer = correctAnswers[num.toString()] ?? '-';
-                      
+                      final correctAnswer =
+                          correctAnswers[num.toString()] ?? '-';
+
                       final isCorrect = userAnswer == correctAnswer;
-                      final isEmpty = userAnswer == '-' || userAnswer == '' || userAnswer == null;
+                      final isEmpty =
+                          userAnswer == '-' ||
+                          userAnswer == '' ||
+                          userAnswer == null;
 
                       Color bgColor;
                       Color textColor;
@@ -320,7 +429,12 @@ class ScanResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String label, String value, Color color, IconData icon) {
+  Widget _buildStatItem(
+    String label,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 32),
@@ -333,13 +447,7 @@ class ScanResultScreen extends StatelessWidget {
             color: color,
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[700],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
       ],
     );
   }

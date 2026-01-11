@@ -18,7 +18,9 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
     try {
       // Delete image from Storage
       try {
-        await FirebaseStorage.instance.ref('scans/$scanId/original.jpg').delete();
+        await FirebaseStorage.instance
+            .ref('scans/$scanId/original.jpg')
+            .delete();
       } catch (e) {
         print('Error deleting image: $e');
       }
@@ -67,9 +69,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
               Navigator.pop(context);
               _deleteScan(scanId);
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Hapus'),
           ),
         ],
@@ -148,10 +148,13 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
             itemBuilder: (context, index) {
               final doc = docs[index];
               final data = doc.data() as Map<String, dynamic>;
-              
-              final studentName = data['student_name'] as String? ?? 'Tanpa Nama';
+
+              final studentName =
+                  data['student_name'] as String? ?? 'Tanpa Nama';
+              final nim = data['nim'] as String? ?? '-';
               final status = data['status'] as String? ?? 'processing';
-              final submittedAt = (data['submitted_at'] as Timestamp?)?.toDate();
+              final submittedAt = (data['submitted_at'] as Timestamp?)
+                  ?.toDate();
               final results = data['results'] as Map<String, dynamic>?;
 
               Color statusColor;
@@ -199,6 +202,13 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        'NIM: $nim',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -232,18 +242,23 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                                   if (!keySnapshot.hasData) {
                                     return const SizedBox();
                                   }
-                                  
-                                  final keyData = keySnapshot.data!.data() as Map<String, dynamic>?;
+
+                                  final keyData =
+                                      keySnapshot.data!.data()
+                                          as Map<String, dynamic>?;
                                   if (keyData == null) return const SizedBox();
-                                  
-                                  final correctAnswers = keyData['answers'] as Map<String, dynamic>;
+
+                                  final correctAnswers =
+                                      keyData['answers']
+                                          as Map<String, dynamic>;
                                   int correct = 0;
                                   for (int i = 1; i <= 100; i++) {
-                                    if (results[i.toString()] == correctAnswers[i.toString()]) {
+                                    if (results[i.toString()] ==
+                                        correctAnswers[i.toString()]) {
                                       correct++;
                                     }
                                   }
-                                  
+
                                   return Text(
                                     'Nilai: $correct',
                                     style: const TextStyle(
@@ -308,9 +323,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const UploadScanScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const UploadScanScreen()),
           );
         },
         label: const Text('Upload LJK'),

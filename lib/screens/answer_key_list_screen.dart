@@ -9,9 +9,7 @@ class AnswerKeyListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daftar Kunci Jawaban'),
-      ),
+      appBar: AppBar(title: const Text('Daftar Kunci Jawaban')),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('answer_keys')
@@ -145,37 +143,66 @@ class AnswerKeyListScreen extends StatelessWidget {
         title: Text(name),
         content: SizedBox(
           width: double.maxFinite,
+          height: 400,
           child: GridView.builder(
             shrinkWrap: true,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 10,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              childAspectRatio: 1,
             ),
             itemCount: 100,
             itemBuilder: (context, index) {
               final number = index + 1;
               final answer = answers[number.toString()] ?? '-';
+              
+              Color answerColor = Colors.grey;
+              if (answer != '-' && answer != null) {
+                switch (answer) {
+                  case 'A':
+                    answerColor = Colors.blue;
+                    break;
+                  case 'B':
+                    answerColor = Colors.green;
+                    break;
+                  case 'C':
+                    answerColor = Colors.orange;
+                    break;
+                  case 'D':
+                    answerColor = Colors.purple;
+                    break;
+                  case 'E':
+                    answerColor = Colors.red;
+                    break;
+                }
+              }
+              
               return Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
+                  color: answerColor.withOpacity(0.1),
+                  border: Border.all(color: answerColor, width: 1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '$number',
-                      style: const TextStyle(fontSize: 10),
-                    ),
-                    Text(
-                      answer,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$number',
+                        style: const TextStyle(fontSize: 8),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ],
+                      Text(
+                        answer,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                          color: answerColor,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

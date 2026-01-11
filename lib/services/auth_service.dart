@@ -1,6 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/foundation.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -56,48 +54,14 @@ class AuthService {
     }
   }
 
-  // Sign in with Google
+  // Sign in with Google (stubbed until configured)
   static Future<AuthResult> signInWithGoogle() async {
-    try {
-      // Trigger the authentication flow
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-      if (googleUser == null) {
-        return AuthResult.error('Google sign in was cancelled');
-      }
-
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          googleUser.authentication;
-
-      // Create a new credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase with the Google credentials
-      final UserCredential result = await _auth.signInWithCredential(
-        credential,
-      );
-      return AuthResult.success(result.user);
-    } on FirebaseAuthException catch (e) {
-      return AuthResult.error(_getErrorMessage(e.code));
-    } catch (e) {
-      return AuthResult.error('An unexpected error occurred');
-    }
+    return AuthResult.error('Google Sign-In belum dikonfigurasi');
   }
 
   // Sign out
   static Future<void> signOut() async {
-    if (kIsWeb) {
-      await _auth.signOut();
-    } else {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut();
-      await _auth.signOut();
-    }
+    await _auth.signOut();
   }
 
   // Send password reset email

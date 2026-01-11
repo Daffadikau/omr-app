@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +19,7 @@ class UploadScanScreen extends StatefulWidget {
 
 class _UploadScanScreenState extends State<UploadScanScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _nimController = TextEditingController();
   final ScanService _scanService = ScanService();
   final ImagePicker _picker = ImagePicker();
   static const Duration _uploadTimeout = Duration(seconds: 60);
@@ -39,13 +39,13 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
       _selectedImageBytes = null;
       _selectedFileName = null;
       _uploadError = null;
-      _hasTimeout = false;
     });
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _nimController.dispose();
     super.dispose();
   }
 
@@ -76,9 +76,9 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error memilih gambar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error memilih gambar: $e')));
       }
     }
   }
@@ -86,9 +86,7 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
   Future<void> _selectAnswerKey() async {
     final result = await Navigator.push<String>(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AnswerKeyListScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AnswerKeyListScreen()),
     );
 
     if (result != null) {
@@ -114,9 +112,16 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
     }
 
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Masukkan nama siswa')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Masukkan nama siswa')));
+      return;
+    }
+
+    if (_nimController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Masukkan NIM siswa')));
       return;
     }
 
@@ -134,24 +139,30 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
     });
 
     try {
-      final scanId = await _scanService.uploadScan(
-        imageFile: _selectedImageFile,
-        imageBytes: _selectedImageBytes,
-        fileName: _selectedFileName ?? 'scan.jpg',
-        studentName: _nameController.text.trim(),
-        answerKeyId: _selectedAnswerKeyId!,
-      ).timeout(
-        _uploadTimeout,
-        onTimeout: () {
-          setState(() => _hasTimeout = true);
-          throw TimeoutException('Upload timeout setelah ${_uploadTimeout.inSeconds} detik');
-        },
-      );
+      // Gunakan backend processing untuk hasil langsung
+      final scanId = await _scanService
+          .uploadAndProcessWithBackend(
+            imageFile: _selectedImageFile,
+            imageBytes: _selectedImageBytes,
+            fileName: _selectedFileName ?? 'scan.jpg',
+            studentName: _nameController.text.trim(),
+            nim: _nimController.text.trim(),
+            answerKeyId: _selectedAnswerKeyId!,
+          )
+          .timeout(
+            _uploadTimeout,
+            onTimeout: () {
+              setState(() => _hasTimeout = true);
+              throw TimeoutException(
+                'Upload timeout setelah ${_uploadTimeout.inSeconds} detik',
+              );
+            },
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('LJK berhasil diupload, sedang diproses...'),
+            content: Text('LJK berhasil diproses!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -168,7 +179,6 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
       if (mounted) {
         setState(() {
           _uploadError = 'Timeout: ${e.message}';
-          _hasTimeout = true;
         });
       }
     } catch (e) {
@@ -187,9 +197,7 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Upload LJK'),
-      ),
+      appBar: AppBar(title: const Text('Upload LJK')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -202,6 +210,17 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
                 labelText: 'Nama Siswa',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.person),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Input NIM
+            TextField(
+              controller: _nimController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'NIM',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.badge_outlined),
               ),
             ),
             const SizedBox(height: 16),
@@ -225,10 +244,7 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
                         children: [
                           const Text(
                             'Kunci Jawaban',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -384,7 +400,9 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _isUploading ? null : () => _pickImage(ImageSource.camera),
+                    onPressed: _isUploading
+                        ? null
+                        : () => _pickImage(ImageSource.camera),
                     icon: const Icon(Icons.camera_alt),
                     label: const Text('Kamera'),
                     style: OutlinedButton.styleFrom(
@@ -395,7 +413,9 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _isUploading ? null : () => _pickImage(ImageSource.gallery),
+                    onPressed: _isUploading
+                        ? null
+                        : () => _pickImage(ImageSource.gallery),
                     icon: const Icon(Icons.photo_library),
                     label: const Text('Galeri'),
                     style: OutlinedButton.styleFrom(
@@ -418,7 +438,9 @@ class _UploadScanScreenState extends State<UploadScanScreen> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Icon(Icons.upload),

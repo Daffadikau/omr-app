@@ -224,7 +224,7 @@ class CacheService {
       final cacheInfo = await _getCacheInfo();
       final totalSize = cacheInfo.values.fold<int>(
         0,
-        (sum, info) => sum + info['size'],
+        (sum, info) => sum + (info['size'] as int? ?? 0),
       );
 
       if (totalSize > _maxImageCacheSize) {
@@ -390,7 +390,7 @@ class CacheService {
       }
 
       // Clear JSON cache
-      final keys = _prefs?.getKeys() ?? [];
+      final Set<String> keys = _prefs?.getKeys() ?? <String>{};
       for (final key in keys) {
         if (key.startsWith('json_cache_') ||
             key.startsWith('json_cache_expiry_') ||
